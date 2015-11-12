@@ -30,37 +30,42 @@ func main() {
 
 	prev := ""
 	for {
-		track := oleutil.MustGetProperty(dsp, "CurrentTrack").ToIDispatch()
-		if track != nil {
-			name := oleutil.MustGetProperty(track, "Name").ToString()
-			artist := oleutil.MustGetProperty(track, "artist").ToString()
-			album := oleutil.MustGetProperty(track, "Album").ToString()
-			curr := fmt.Sprintf("%s/%s\n%s", name, artist, album)
-			if curr != prev {
-				prev = curr
-				artwork := oleutil.MustGetProperty(track, "Artwork").ToIDispatch()
-				item := oleutil.MustGetProperty(artwork, "Item", 1).ToIDispatch()
-				icon := ""
-				if item != nil {
-					_, err = oleutil.CallMethod(item, "SaveArtworkToFile", artworkjpg)
+		func() {
+			defer func() {
+				recover()
+			}()
+			track := oleutil.MustGetProperty(dsp, "CurrentTrack").ToIDispatch()
+			if track != nil {
+				name := oleutil.MustGetProperty(track, "Name").ToString()
+				artist := oleutil.MustGetProperty(track, "artist").ToString()
+				album := oleutil.MustGetProperty(track, "Album").ToString()
+				curr := fmt.Sprintf("%s/%s\n%s", name, artist, album)
+				if curr != prev {
+					prev = curr
+					artwork := oleutil.MustGetProperty(track, "Artwork").ToIDispatch()
+					item := oleutil.MustGetProperty(artwork, "Item", 1).ToIDispatch()
+					icon := ""
+					if item != nil {
+						_, err = oleutil.CallMethod(item, "SaveArtworkToFile", artworkjpg)
+						if err != nil {
+							log.Print(err)
+						} else {
+							icon = artworkjpg
+						}
+					}
+					log.Print(curr)
+					err = gc.Notify(&gntp.Message{
+						Event: "default",
+						Title: "iTunes",
+						Text:  curr,
+						Icon:  icon,
+					})
 					if err != nil {
 						log.Print(err)
-					} else {
-						icon = artworkjpg
 					}
 				}
-				log.Print(curr)
-				err = gc.Notify(&gntp.Message{
-					Event: "default",
-					Title: "iTunes",
-					Text:  curr,
-					Icon:  icon,
-				})
-				if err != nil {
-					log.Print(err)
-				}
 			}
-		}
-		time.Sleep(1 * time.Second)
+		}()
+		time.Sleep(3 * time.Second)
 	}
 }
